@@ -73,7 +73,7 @@ def main():
     config = load_pretrained_model_config(args, AutoConfig)
     tokenizer = load_pretrained_tokenizer(args, AutoTokenizer)
     model = load_pretrained_model(args, AutoModelForSeq2SeqLM, config, tokenizer)
-    reward_transformer = load_pretrained_model(args, T5Model, config, tokenizer)
+    reward_transformer = load_pretrained_model(args, T5Model, config, tokenizer, reward_model=True)
     generate_with_grad = undecorated(model.generate)
     model.generate_with_grad = MethodType(generate_with_grad, model)
 
