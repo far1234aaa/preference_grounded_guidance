@@ -6,6 +6,7 @@ from functools import partial
 from math import ceil
 import os
 import time
+import evaluate
 from utils import (
     _build_one_layer_mlp,
     _init_weights,
@@ -114,7 +115,7 @@ class RewardModelTrainer(object):
         self.module = reward_model
         self.policy = policy
         self.tokenizer = tokenizer
-        self.metric = metric
+        self.metric = evaluate.load('meteor')
         self.train_dataloader = rew_train_dataloader
         self.eval_dataloader = rew_eval_dataloader
 
@@ -189,7 +190,7 @@ class RewardModelTrainer(object):
         prints(f"\n{self.print_prefix} len(train_dataloader): {len(self.train_dataloader)}, len(eval_dataloader): {len(self.eval_dataloader)}, rew_num_train_epochs: {self.rew_num_train_epochs}, "
                f"\nrew_learning_rate: {self.rew_learning_rate}, reward_learning_samples: {self.reward_learning_samples}, reward_learning_batch_size: {self.reward_learning_batch_size}, "
                f"\nrew_gradient_accumulation_steps: {self.rew_gradient_accumulation_steps}, num_updates_per_epoch: {self.num_updates_per_epoch}, \nagg_func: {self.agg_func}, \nsoft_maxmin_temp: {self.soft_maxmin_temp}, "
-               f"rew_eval_period: {self.rew_eval_period}, num_valid_batch: {self.num_valid_batch}, report_interval: {self.report_interval} \n")
+               f"rew_eval_period: {self.rew_eval_period}, num_valid_batch: {self.num_valid_batch}, report_interval: {self.report_interval}, env reward: {self.metric.name} \n")
 
     def _load_checkpoint(self, checkpoint_path: str) -> None:
         checkpoint = torch.load(checkpoint_path, map_location=self.device)
@@ -206,15 +207,13 @@ class RewardModelTrainer(object):
         return decoded_preds, decoded_labels, generated_tokens, generated_tokens_mask
 
     def compute_rewards(self, decoded_preds, decoded_labels):
-        self.metric.add_batch(
-            predictions=decoded_preds,
-            references=decoded_labels,
-        )
-        result = self.metric.compute(use_stemmer=True, use_aggregator=False)
+        final_score = []
+        for preds, labels in zip(decoded_preds, decoded_labels):
+            final_score.append(self.metric.compute(predictions=[preds], references=[labels])['meteor'])
 
-        final_score = torch.tensor(result['rouge1']) + 2 * torch.tensor(result['rouge2']) + torch.tensor(result['rougeLsum'])
+        final_score = torch.tensor(final_score).to(self.device)
 
-        return final_score.to(self.device) * 100.
+        return final_score
 
     def get_loss(self, batch):
 
