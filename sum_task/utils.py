@@ -6,7 +6,7 @@ from datasets import load_dataset
 from transformers import CONFIG_MAPPING
 import nltk
 import numpy as np
-
+from transformers import AutoConfig
 
 def set_random_seed(seed):
     random.seed(seed)
@@ -100,11 +100,14 @@ def load_pretrained_tokenizer(args, loader):
     return tokenizer
 
 
-def load_pretrained_model(args, loader, config, tokenizer):
+def load_pretrained_model(args, loader, config, tokenizer, reward_model=False):
+    prints(f"Load model {'REWARD' if reward_model else 'POLICY'}: {args.rew_model_name_or_path if reward_model else args.model_name_or_path}", warning=True)
 
-    if args.model_name_or_path:
+    config = AutoConfig.from_pretrained(args.rew_model_name_or_path) if reward_model else config
+
+    if args.model_name_or_path or args.rew_model_name_or_path:
         model = loader.from_pretrained(
-            args.model_name_or_path,
+            args.rew_model_name_or_path if reward_model else args.model_name_or_path,
             from_tf=bool(".ckpt" in args.model_name_or_path),
             config=config,
         )
