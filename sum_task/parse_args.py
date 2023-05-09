@@ -122,6 +122,12 @@ def parse_args():
         default="t5-small",
     )
     parser.add_argument(
+        "--rew_model_name_or_path",
+        type=str,
+        help="Path to pretrained model or model identifier from huggingface.co/models.",
+        default="t5-small",
+    )
+    parser.add_argument(
         "--config_name",
         type=str,
         default=None,
